@@ -3,6 +3,9 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -13,25 +16,19 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK manually
+      - name: Full Android Setup and Build
         run: |
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdtools.zip
           mkdir -p $HOME/android/cmdline-tools
           unzip -q cmdtools.zip -d $HOME/android/cmdline-tools
           mv $HOME/android/cmdline-tools/cmdline-tools $HOME/android/cmdline-tools/latest
           export ANDROID_HOME=$HOME/android
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/ndk/25.2.9519653
+          yes | sdkmanager --sdk_root=$HOME/android "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.2.9519653" "cmake;3.22.1"
           echo "ANDROID_HOME=$HOME/android" >> $GITHUB_ENV
           echo "$HOME/android/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$HOME/android/platform-tools" >> $GITHUB_PATH
-          yes | sdkmanager --sdk_root=$HOME/android "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.2.9519653" "cmake;3.22.1"
-
-      - name: Unzip project
-        run: unzip KeyMapperProV2.zip
-
-      - name: Build APK
-        run: |
-          export ANDROID_HOME=$HOME/android
+          unzip KeyMapperProV2.zip
           cd KeyMapperV2
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
